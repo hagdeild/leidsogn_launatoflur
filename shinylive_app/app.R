@@ -1,6 +1,5 @@
 library(shiny)
 library(bslib)
-library(dplyr)
 
 # --- Data Loading (from pre-processed CSV files) ---
 salary_data <- read.csv("salary_data.csv", stringsAsFactors = FALSE)
@@ -83,14 +82,14 @@ ui <- page_sidebar(
 
     radioButtons("ferd_tegund", "Tegund fer\u00f0ar",
       choices = c(
-        "Dagsfer\u00f0" = "dagsfer\u00f0",
+        "Dagsfer\u00f0" = "dagsferd",
         "Langfer\u00f0 (11 klst./dag)" = "langferd_11",
         "Langfer\u00f0 - Tjald og sk\u00e1lafer\u00f0ir (12 klst./dag)" = "langferd_12"
       )
     ),
 
     conditionalPanel(
-      "input.ferd_tegund == 'dagsfer\u00f0'",
+      "input.ferd_tegund == 'dagsferd'",
       selectInput("dag_klst", "Lengd fer\u00f0ar",
         choices = setNames(4:11, paste0(4:11, " klst."))
       ),
@@ -149,15 +148,17 @@ server <- function(input, output, session) {
 
   # Lookup monthly salary
   manadarlaun <- reactive({
-    row <- salary_data |>
-      filter(tegund == input$tegund, flokkur == input$flokkur, ar == input$ar)
+    row <- salary_data[salary_data$tegund == input$tegund &
+                        salary_data$flokkur == input$flokkur &
+                        salary_data$ar == input$ar, ]
     req(nrow(row) > 0)
     row$manadarlaun[1]
   })
 
   # Lookup des/orlofsuppbot per hour
   uppbot_per_hour <- reactive({
-    row <- uppbot_data |> filter(tegund == input$tegund, ar == input$ar)
+    row <- uppbot_data[uppbot_data$tegund == input$tegund &
+                        uppbot_data$ar == input$ar, ]
     req(nrow(row) > 0)
     row$uppbot[1]
   })
@@ -193,7 +194,7 @@ server <- function(input, output, session) {
     dagv <- dagvinnukaup()
     yfirv <- yfirvinnukaup()
 
-    if (input$ferd_tegund == "dagsfer\u00f0") {
+    if (input$ferd_tegund == "dagsferd") {
       hours <- as.numeric(input$dag_klst)
       is_weekday <- input$dag_tegund == "weekday"
 
