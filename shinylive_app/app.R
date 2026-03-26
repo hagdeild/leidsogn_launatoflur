@@ -15,10 +15,10 @@ flokkur_choices <- unique(salary_data$flokkur)
 
 # Vacation options
 orlof_choices <- c(
-  "\u00c1n orlofs" = 0,
+  "Án orlofs" = 0,
   "24 dagar (10,17% orlof)" = 0.1017,
-  "27 dagar (5 \u00e1ra starfsreynsla)" = 0.1159,
-  "30 dagar (10 \u00e1ra starfsreynsla)" = 0.1304
+  "27 dagar (5 ára starfsreynsla)" = 0.1159,
+  "30 dagar (10 ára starfsreynsla)" = 0.1304
 )
 
 # Long trip predefined splits: list of (virkir, fridagar) per duration
@@ -38,6 +38,7 @@ fmt_kr <- function(x) {
 }
 
 fmt_num <- function(x) {
+  # Format number with Icelandic separators (for non-currency display)
   if (x == round(x)) {
     format(x, big.mark = ".", decimal.mark = ",")
   } else {
@@ -47,7 +48,7 @@ fmt_num <- function(x) {
 
 # --- UI ---
 ui <- page_sidebar(
-  title = "Launatafla og \u00fatreikningar fyrir dags- og langfer\u00f0ir",
+  title = "Launatafla og útreikningar fyrir dags- og langferðir",
   theme = bs_theme(
     version = 5,
     bootswatch = "flatly",
@@ -62,15 +63,15 @@ ui <- page_sidebar(
   sidebar = sidebar(
     width = 320,
 
-    selectInput("ar", "Veldu \u00e1r",
+    selectInput("ar", "Veldu ár",
       choices = ar_choices, selected = "2026"
     ),
 
-    selectInput("tegund", "Veldu t\u00f6flu",
-      choices = c("Lei\u00f0s\u00f6guma\u00f0ur", "\u00d6kulei\u00f0s\u00f6guma\u00f0ur")
+    selectInput("tegund", "Veldu töflu",
+      choices = c("Leiðsögumaður", "Ökuleiðsögumaður")
     ),
 
-    selectInput("orlof", "Veldu orlofsr\u00e9ttindi",
+    selectInput("orlof", "Veldu orlofsréttindi",
       choices = names(orlof_choices)
     ),
 
@@ -80,27 +81,27 @@ ui <- page_sidebar(
 
     hr(),
 
-    radioButtons("ferd_tegund", "Tegund fer\u00f0ar",
+    radioButtons("ferd_tegund", "Tegund ferðar",
       choices = c(
-        "Dagsfer\u00f0" = "dagsferd",
-        "Langfer\u00f0 (11 klst./dag)" = "langferd_11",
-        "Langfer\u00f0 - Tjald og sk\u00e1lafer\u00f0ir (12 klst./dag)" = "langferd_12"
+        "Dagsferð" = "dagsferd",
+        "Langferð (11 klst./dag)" = "langferd_11",
+        "Langferð - Tjald og skálaferðir (12 klst./dag)" = "langferd_12"
       )
     ),
 
     conditionalPanel(
       "input.ferd_tegund == 'dagsferd'",
-      selectInput("dag_klst", "Lengd fer\u00f0ar",
+      selectInput("dag_klst", "Lengd ferðar",
         choices = setNames(4:11, paste0(4:11, " klst."))
       ),
       radioButtons("dag_tegund", "Dagur vikunnar",
-        choices = c("M\u00e1nudagur - f\u00f6studagur" = "weekday", "Laugardagur - sunnudagur" = "weekend")
+        choices = c("Mánudagur - föstudagur" = "weekday", "Laugardagur - sunnudagur" = "weekend")
       )
     ),
 
     conditionalPanel(
       "input.ferd_tegund == 'langferd_11' || input.ferd_tegund == 'langferd_12'",
-      selectInput("lang_dagar", "Lengd fer\u00f0ar",
+      selectInput("lang_dagar", "Lengd ferðar",
         choices = setNames(
           c("2", "4", "6", "8", "10", "12", "14"),
           paste0(c(2, 4, 6, 8, 10, 12, 14), " dagar")
@@ -120,12 +121,12 @@ ui <- page_sidebar(
     ),
 
     card(
-      card_header(class = "bg-primary text-white", "\u00datreikningur"),
+      card_header(class = "bg-primary text-white", "Útreikningur"),
       tableOutput("utreikningur")
     ),
 
     card(
-      card_header("L\u00fdsing launaflokks"),
+      card_header("Lýsing launaflokks"),
       textOutput("flokkur_lysing")
     )
   )
@@ -139,9 +140,9 @@ server <- function(input, output, session) {
     req(input$lang_dagar)
     splits <- long_trip_splits[[input$lang_dagar]]
     choices <- sapply(splits, function(s) {
-      paste0(s[1], " virkir + ", s[2], " fr\u00eddagar")
+      paste0(s[1], " virkir + ", s[2], " frídagar")
     })
-    selectInput("skipting", "Skipting virkra daga / fr\u00eddaga",
+    selectInput("skipting", "Skipting virkra daga / frídaga",
       choices = setNames(seq_along(choices), choices)
     )
   })
@@ -155,7 +156,7 @@ server <- function(input, output, session) {
     row$manadarlaun[1]
   })
 
-  # Lookup des/orlofsuppbot per hour
+  # Lookup des/orlofsuppbót per hour
   uppbot_per_hour <- reactive({
     row <- uppbot_data[uppbot_data$tegund == input$tegund &
                         uppbot_data$ar == input$ar, ]
@@ -174,9 +175,9 @@ server <- function(input, output, session) {
   # Launatafla output
   output$launatafla <- renderTable({
     data.frame(
-      ` ` = c("M\u00e1na\u00f0arlaun", "Dagvinnukaup", "Yfirvinnukaup",
-              "St\u00f3rh\u00e1t\u00ed\u00f0akaup", "Des/orlofsupp\u00f3t \u00e1 klst."),
-      `Upph\u00e6\u00f0` = c(
+      ` ` = c("Mánaðarlaun", "Dagvinnukaup", "Yfirvinnukaup",
+              "Stórhátíðakaup", "Des/orlofsuppbót á klst."),
+      `Upphæð` = c(
         fmt_kr(manadarlaun()),
         fmt_kr(dagvinnukaup()),
         fmt_kr(yfirvinnukaup()),
@@ -235,7 +236,7 @@ server <- function(input, output, session) {
 
       uppbot_total <- uppbot_klst * uppbot
       rows[[length(rows) + 1]] <- c(
-        "Des/orlofsupp\u00f3t",
+        "Des/orlofsuppbót",
         fmt_num(uppbot_klst),
         fmt_kr(uppbot),
         fmt_kr(uppbot_total)
@@ -245,7 +246,7 @@ server <- function(input, output, session) {
       rows[[length(rows) + 1]] <- c("Samtals", "", "", fmt_kr(samtals))
 
       df <- do.call(rbind, rows) |> as.data.frame()
-      names(df) <- c("Li\u00f0ur", "Klst.", "Kaup/klst.", "Samtals")
+      names(df) <- c("Liður", "Klst.", "Kaup/klst.", "Samtals")
       df
 
     } else {
@@ -281,7 +282,7 @@ server <- function(input, output, session) {
       }
       if (fridagar > 0) {
         rows[[length(rows) + 1]] <- c(
-          "Almennir fr\u00eddagar", as.character(fridagar),
+          "Almennir frídagar", as.character(fridagar),
           fmt_kr(daglaun_fridagur), fmt_kr(fridagar_total)
         )
       }
@@ -301,7 +302,7 @@ server <- function(input, output, session) {
       uppbot_total <- virkir * 7.5 * uppbot
       if (uppbot_total > 0) {
         rows[[length(rows) + 1]] <- c(
-          "Des/orlofsupp\u00f3t",
+          "Des/orlofsuppbót",
           paste0(virkir, " virkir \u00d7 7,5 klst."),
           fmt_kr(uppbot),
           fmt_kr(uppbot_total)
@@ -312,13 +313,14 @@ server <- function(input, output, session) {
       rows[[length(rows) + 1]] <- c("Samtals", "", "", fmt_kr(samtals))
 
       df <- do.call(rbind, rows) |> as.data.frame()
-      names(df) <- c("Li\u00f0ur", "Dagar", "Daglaun", "Samtals")
+      names(df) <- c("Liður", "Dagar", "Daglaun", "Samtals")
       df
     }
   }, striped = TRUE, hover = TRUE, width = "100%", align = "lrrr")
 
   # Wage group description
   output$flokkur_lysing <- renderText({
+    # Extract the launaflokkur number (1-4) from the selection
     flokkur_num <- sub("Flokkur (\\d+).*", "\\1", input$flokkur)
     key <- paste("Launaflokkur", flokkur_num)
     if (key %in% names(flokkur_desc)) {
