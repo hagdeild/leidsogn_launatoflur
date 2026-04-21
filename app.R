@@ -30,13 +30,14 @@ extract_data <- function(sheet_name) {
     })
   )
 
-  # Des/orlofsuppbót: row 7, columns 17-22 (max range for both sheets)
-  max_col <- min(ncol(raw), 22)
-  uppbot_headers <- as.character(raw[6, 17:max_col])
-  uppbot_values <- as.numeric(raw[7, 17:max_col])
+  # Des/orlofsuppbót: row 7, columns 18 onwards (column 17 is an empty spacer).
+  # Leiðsögn has 7 year columns (18-24), Ökuleiðsögn has 6 (18-23). Beyond those
+  # the sheet contains orlof lookup data, so keep only headers that look like a year.
+  uppbot_headers <- as.character(raw[6, 18:ncol(raw)])
+  uppbot_values <- suppressWarnings(as.numeric(raw[7, 18:ncol(raw)]))
 
-  # Keep only non-NA values
-  valid <- !is.na(uppbot_headers) & !is.na(uppbot_values)
+  is_year <- grepl("^\\d{4}", uppbot_headers)
+  valid <- is_year & !is.na(uppbot_values)
   uppbot_tbl <- tibble(
     ar = uppbot_headers[valid],
     uppbot = uppbot_values[valid]
@@ -156,17 +157,7 @@ fmt_num <- function(x) {
 }
 
 # --- UI ---
-ui <- page_sidebar(
-  title = tags$span(
-    tags$div(
-      "Reiknivél fyrir verkefna-/ferðaráðið leiðsögufólk",
-      style = "font-size: 1.1em; line-height: 1.2;"
-    ),
-    tags$div(
-      "Gildir frá 1. febrúar 2024",
-      style = "font-size: 0.65em; font-weight: normal; opacity: 0.85; margin-top: 2px;"
-    )
-  ),
+ui <- page_fluid(
   theme = bs_theme(
     version = 5,
     bootswatch = "flatly",
@@ -174,98 +165,154 @@ ui <- page_sidebar(
     secondary = "#0d8bb7",
     success = "#f0d526",
     "enable-rounded" = TRUE,
-    "border-radius" = "0.5rem",
-    "navbar-bg" = "#013766"
+    "border-radius" = "0.5rem"
   ),
 
-  sidebar = sidebar(
-    width = 320,
+  tags$head(tags$style(HTML(
+    "
+    .card { height: auto !important; overflow: visible !important; }
+    .card-body { height: auto !important; max-height: none !important; overflow: visible !important; flex: 0 0 auto !important; }
+  "
+  ))),
 
-    selectInput(
-      "ar",
-      span(icon("calendar-alt"), "Veldu ár"),
-      choices = ar_choices,
-      selected = "2026"
-    ),
-
-    selectInput(
-      "tegund",
-      span(icon("compass"), "Veldu töflu"),
-      choices = c("Leiðsögumaður", "Ökuleiðsögumaður")
-    ),
-
-    selectInput(
-      "orlof",
-      span(icon("umbrella-beach"), "Veldu orlofsréttindi"),
-      choices = names(orlof_choices)
-    ),
-
-    selectInput(
-      "flokkur",
-      span(icon("layer-group"), "Veldu launaflokk"),
-      choices = flokkur_choices
-    ),
-
-    hr(),
-
-    radioButtons(
-      "ferd_tegund",
-      span(icon("route"), "Tegund ferðar"),
-      choices = c(
-        "Dagsferð" = "dagsferð",
-        "Langferð (11 klst./dag)" = "langferd_11",
-        "Langferð - Tjald og skálaferðir (12 klst./dag)" = "langferd_12"
-      )
-    ),
-
-    conditionalPanel(
-      "input.ferd_tegund == 'dagsferð'",
-      selectInput(
-        "dag_klst",
-        span(icon("clock"), "Lengd ferðar"),
-        choices = setNames(4:11, paste0(4:11, " klst."))
+  # Header bar
+  div(
+    class = "container-fluid py-3 mb-4",
+    style = "background-color: #013766; color: white;",
+    div(
+      class = "container",
+      h2(
+        "Reiknivél fyrir verkefna-/ferðaráðið leiðsögufólk",
+        style = "margin: 0; font-size: 1.5rem;"
       ),
-      radioButtons(
-        "dag_tegund",
-        span(icon("calendar-week"), "Dagur vikunnar"),
-        choices = c(
-          "Mánudagur - föstudagur" = "weekday",
-          "Laugardagur - sunnudagur" = "weekend"
-        )
+      p(
+        "Gildir frá 1. febrúar 2024",
+        style = "margin: 4px 0 0 0; font-size: 0.9rem; opacity: 0.8;"
       )
-    ),
-
-    conditionalPanel(
-      "input.ferd_tegund == 'langferd_11' || input.ferd_tegund == 'langferd_12'",
-      selectInput(
-        "lang_dagar",
-        span(icon("clock"), "Lengd ferðar"),
-        choices = setNames(
-          c("2", "4", "6", "8", "10", "12", "14"),
-          paste0(c(2, 4, 6, 8, 10, 12, 14), " dagar")
-        )
-      ),
-      uiOutput("skipting_ui")
     )
   ),
 
-  # Main panel
-  layout_columns(
-    col_widths = c(12),
+  # Main content
+  div(
+    class = "container",
+    fluidRow(
+      # Left column: inputs
+      column(
+        width = 4,
+        card(
+          full_screen = FALSE,
+          fill = FALSE,
+          card_header(class = "bg-light", h5("Stillingar", class = "m-0")),
+          card_body(
+            fillable = FALSE,
+            selectInput(
+              "ar",
+              span(icon("calendar-alt"), "Veldu ár"),
+              choices = ar_choices,
+              selected = "2026",
+              width = "100%"
+            ),
+            selectInput(
+              "tegund",
+              span(icon("compass"), "Veldu töflu"),
+              choices = c("Leiðsögumaður", "Ökuleiðsögumaður"),
+              width = "100%"
+            ),
+            selectInput(
+              "orlof",
+              span(icon("umbrella-beach"), "Veldu orlofsréttindi"),
+              choices = names(orlof_choices),
+              width = "100%"
+            ),
+            selectInput(
+              "flokkur",
+              span(icon("layer-group"), "Veldu launaflokk"),
+              choices = flokkur_choices,
+              width = "100%"
+            )
+          )
+        ),
+        card(
+          full_screen = FALSE,
+          fill = FALSE,
+          card_header(class = "bg-light", h5("Tegund ferðar", class = "m-0")),
+          card_body(
+            fillable = FALSE,
+            radioButtons(
+              "ferd_tegund",
+              span(icon("route"), "Tegund ferðar"),
+              choices = c(
+                "Dagsferð" = "dagsferð",
+                "Langferð (11 klst./dag)" = "langferd_11",
+                "Langferð - Tjald og skálaferðir (12 klst./dag)" = "langferd_12"
+              )
+            ),
+            conditionalPanel(
+              "input.ferd_tegund == 'dagsferð'",
+              selectInput(
+                "dag_klst",
+                span(icon("clock"), "Lengd ferðar"),
+                choices = setNames(4:11, paste0(4:11, " klst.")),
+                width = "100%"
+              ),
+              radioButtons(
+                "dag_tegund",
+                span(icon("calendar-week"), "Dagur vikunnar"),
+                choices = c(
+                  "Mánudagur - föstudagur" = "weekday",
+                  "Laugardagur - sunnudagur" = "weekend"
+                )
+              )
+            ),
+            conditionalPanel(
+              "input.ferd_tegund == 'langferd_11' || input.ferd_tegund == 'langferd_12'",
+              selectInput(
+                "lang_dagar",
+                span(icon("clock"), "Lengd ferðar"),
+                choices = setNames(
+                  c("2", "4", "6", "8", "10", "12", "14"),
+                  paste0(c(2, 4, 6, 8, 10, 12, 14), " dagar")
+                ),
+                width = "100%"
+              ),
+              uiOutput("skipting_ui")
+            )
+          )
+        )
+      ),
 
-    card(
-      card_header(class = "bg-primary text-white", "Launatafla"),
-      tableOutput("launatafla")
-    ),
+      # Right column: results
+      column(
+        width = 8,
+        card(
+          card_header(
+            style = "background-color: #013766; color: white;",
+            "Launatafla"
+          ),
+          tableOutput("launatafla")
+        ),
+        card(
+          card_header(
+            style = "background-color: #013766; color: white;",
+            "Útreikningur"
+          ),
+          uiOutput("utreikningur")
+        ),
+        card(
+          card_header(class = "bg-light", "Lýsing launaflokks"),
+          card_body(textOutput("flokkur_lysing"))
+        )
+      )
+    )
+  ),
 
-    card(
-      card_header(class = "bg-primary text-white", "Útreikningur"),
-      uiOutput("utreikningur")
-    ),
-
-    card(
-      card_header("Lýsing launaflokks"),
-      textOutput("flokkur_lysing")
+  # Footer
+  div(
+    class = "container-fluid mt-4 py-3",
+    style = "background-color: #0d8bb7; color: white;",
+    div(
+      class = "container text-center",
+      p("© 2025 - Reiknivél fyrir leiðsögufólk")
     )
   )
 )

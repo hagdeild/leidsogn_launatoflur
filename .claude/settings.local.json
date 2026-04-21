@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Rscript -e 'library\\(readxl\\); raw <- read_excel\\(\"leidsogn_launatoflur_fyrir_grid.xlsx\", sheet=\"Leiðsögn\", col_names=FALSE\\); cat\\(\"ncol:\", ncol\\(raw\\), \"\\\\n\"\\); cat\\(\"row 6 \\(headers\\):\\\\n\"\\); print\\(as.character\\(raw[6, 9:20]\\)\\); cat\\(\"\\\\nrow 7 \\(first salary row + uppbot\\):\\\\n\"\\); print\\(as.character\\(raw[7, 9:20]\\)\\)')",
-      "Bash(Rscript -e 'suppressPackageStartupMessages\\({library\\(shiny\\); library\\(bslib\\); library\\(readxl\\); library\\(dplyr\\)}\\); suppressWarnings\\(suppressMessages\\(source\\(\"app.R\"\\)\\)\\); cat\\(\"ar_choices:\\\\n\"\\); print\\(ar_choices\\); cat\\(\"\\\\nuppbot_data:\\\\n\"\\); print\\(uppbot_data\\)')"
+      "Bash(Rscript -e 'suppressPackageStartupMessages\\({library\\(shiny\\); library\\(bslib\\); library\\(readxl\\); library\\(dplyr\\)}\\); suppressWarnings\\(suppressMessages\\(source\\(\"app.R\"\\)\\)\\); cat\\(\"ar_choices:\\\\n\"\\); print\\(ar_choices\\); cat\\(\"\\\\nuppbot_data:\\\\n\"\\); print\\(uppbot_data\\)')",
+      "Bash(Rscript -e ' *)"
     ]
   }
 }
